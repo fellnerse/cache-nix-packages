@@ -7,11 +7,22 @@
 
   outputs = { self, nixpkgs, ... }:
     let
-      system = "aarch64-darwin";
-      pkgs = import nixpkgs { inherit system; };
-      uvPkg = pkgs.uv;  # or adjust for your Python version
-    in
-    {
-      packages.${system}.default = uvPkg;
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = f: builtins.listToAttrs (map (system: {
+        name = system;
+        value = f system;
+      }) systems);
+    in {
+      packages = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in {
+          default = pkgs.uv;
+          uv = pkgs.uv;
+        }
+      );
+
+      # optional shortcut: expose uv also at the top level
+      defaultPackage = forAllSystems (system: (import nixpkgs { inherit system; }).uv);
     };
 }
